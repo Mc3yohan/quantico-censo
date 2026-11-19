@@ -1,0 +1,15 @@
+.git
+.github
+.env
+*.db
+*.sqlite*
+*.sql
+backend/.venv
+**/__pycache__
+**/*.py[cod]
+**/*.egg-info
+backend/.pytest_cache
+frontend/node_modules
+frontend/dist
+docs
+media_storage

@@ -1,0 +1,103 @@
+name: quantico_censo
+
+services:
+  database:
+    image: postgis/postgis:15-3.3
+    container_name: quantico_censo_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-quantico_censo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quantico_censo_local_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-quantico_censo_db}
+    volumes:
+      - quantico_censo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-quantico_censo} -d ${POSTGRES_DB:-quantico_censo_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    container_name: quantico_censo_redis
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend-sync:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: quantico_censo_sync
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      SERVER_ROLE: sync
+      AUTO_SEED_DEMO: "true"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-quantico_censo}:${POSTGRES_PASSWORD:-quantico_censo_local_2026}@database:5432/${POSTGRES_DB:-quantico_censo_db}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-quantico-censo-docker-demo-secret-key-2026-replace-me}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8095,http://127.0.0.1:8095,http://localhost:5173}
+      MEDIA_ROOT: /app/media_storage
+    volumes:
+      - quantico_censo_media:/app/media_storage
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend-read:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: quantico_censo_read
+    restart: unless-stopped
+    depends_on:
+      backend-sync:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      SERVER_ROLE: read
+      AUTO_SEED_DEMO: "false"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-quantico_censo}:${POSTGRES_PASSWORD:-quantico_censo_local_2026}@database:5432/${POSTGRES_DB:-quantico_censo_db}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-quantico-censo-docker-demo-secret-key-2026-replace-me}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8095,http://127.0.0.1:8095,http://localhost:5173}
+      MEDIA_ROOT: /app/media_storage
+    volumes:
+      - quantico_censo_media:/app/media_storage:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  gateway:
+    image: nginx:alpine
+    container_name: quantico_censo_gateway
+    restart: unless-stopped
+    depends_on:
+      backend-sync:
+        condition: service_healthy
+      backend-read:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8095:8000"
+    volumes:
+      - ./infra/nginx.conf:/etc/nginx/nginx.conf:ro
+
+volumes:
+  quantico_censo_pgdata:
+  quantico_censo_media:
