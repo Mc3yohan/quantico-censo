@@ -52,8 +52,8 @@ flowchart TD
         PWA["Mobile Field Agent PWA\nTypeScript Strict · Web Worker AES-GCM-256 · IndexedDB · 3s SOS"]
     end
 
-    CMD -->|"HTTPS / REST + WS"| GW["Nginx CQRS API Gateway (:8095)"]
-    PWA -->|"HTTPS / REST + WS"| GW
+    CMD -->|"HTTP/HTTPS · REST + WS"| GW["Nginx CQRS API Gateway (:8095)"]
+    PWA -->|"HTTP/HTTPS · REST + WS"| GW
 
     GW -->|"POST / PUT / PATCH / DELETE + /auth/logout"| SYNC["backend-sync (FastAPI)\nWrite Plane · 120s Timeout"]
     GW -->|"GET + /auth/login + /ws-ticket + WS /ws/*"| READ["backend-read (FastAPI)\nRead & Realtime Plane"]
@@ -88,7 +88,7 @@ All regions, GeoJSON polygons, retail outlets (`OUT-1001`..`OUT-1018`), routes, 
 ## Quick Start
 
 ### 1. Browser Simulator (Zero Setup)
-Open **[mc3yohan.github.io/quantico-censo](https://mc3yohan.github.io/quantico-censo/)** or open [`docs/index.html`](docs/index.html) locally:
+Open **[mc3yohan.github.io/quantico-censo](https://mc3yohan.github.io/quantico-censo/)** or serve `docs/` locally (`python -m http.server -d docs 8080`, so Web Crypto `crypto.subtle` runs in a Secure Context) to test:
 - **Offline AES-GCM-256 Vault:** Switch to **Mobile App**, toggle **Offline**, capture an audit (or trigger *Drift >150m*, *Outside Zone*, or *409 Conflict*), inspect the 12-byte IV & ciphertext in `IndexedDB`, reconnect, and batch-sync.
 - **3-Second SOS Beacon:** Open the **SOS** tab and hold for 3 seconds to broadcast an active alert onto the Command Center map and resolve it.
 - **RBAC Persona & EN/ES Switcher:** Switch personas (`HQ Admin`, `Metro North`, `Coastal East`, `Field Agent`, `Read-Only Viewer`) and toggle English/Spanish live.
@@ -102,6 +102,7 @@ docker compose up -d --build
 # Swagger API: http://127.0.0.1:8095/docs
 
 # Live E2E check (PostGIS ST_Covers + cross-container Redis Pub/Sub WS):
+pip install httpx websockets
 python scripts/verify_stack.py
 ```
 

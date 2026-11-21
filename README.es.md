@@ -52,8 +52,8 @@ flowchart TD
         PWA["PWA Móvil de Campo\nTypeScript Strict · Web Worker AES-GCM-256 · IndexedDB · SOS 3s"]
     end
 
-    CMD -->|"HTTPS / REST + WS"| GW["Gateway CQRS Nginx (:8095)"]
-    PWA -->|"HTTPS / REST + WS"| GW
+    CMD -->|"HTTP/HTTPS · REST + WS"| GW["Gateway CQRS Nginx (:8095)"]
+    PWA -->|"HTTP/HTTPS · REST + WS"| GW
 
     GW -->|"POST / PUT / PATCH / DELETE + /auth/logout"| SYNC["backend-sync (FastAPI)\nPlano Escritura · Timeout 120s"]
     GW -->|"GET + /auth/login + /ws-ticket + WS /ws/*"| READ["backend-read (FastAPI)\nPlano Lectura y WebSockets"]
@@ -88,7 +88,7 @@ Todas las regiones, polígonos GeoJSON, puntos de venta (`OUT-1001`..`OUT-1018`)
 ## Inicio Rápido
 
 ### 1. Simulador en Navegador (Sin Instalación)
-Abre **[mc3yohan.github.io/quantico-censo](https://mc3yohan.github.io/quantico-censo/)** o abre [`docs/index.html`](docs/index.html) en tu navegador:
+Abre **[mc3yohan.github.io/quantico-censo](https://mc3yohan.github.io/quantico-censo/)** o sirve `docs/` en local (`python -m http.server -d docs 8080`, para que Web Crypto `crypto.subtle` corra en un Secure Context) y prueba:
 - **Bóveda Offline AES-GCM-256:** Entra en **App Móvil**, activa **Offline**, captura una auditoría (o simula *Desvío >150m*, *Fuera de Zona* o *Conflicto 409*), inspecciona el IV de 12 bytes y texto cifrado en `IndexedDB`, reconecta y sincroniza por lotes.
 - **Baliza SOS de 3 segundos:** En la pestaña **SOS**, mantén pulsado 3 segundos para disparar una alerta en el mapa del Centro de Mando y cerrarla en vivo.
 - **Selector RBAC e idioma ES/EN:** Alterna perfiles (`HQ Admin`, `Metro North`, `Coastal East`, `Field Agent`, `Viewer`) y cambia de idioma al instante.
@@ -102,6 +102,7 @@ docker compose up -d --build
 # Swagger API:  http://127.0.0.1:8095/docs
 
 # Verificación E2E en vivo (PostGIS ST_Covers + Redis Pub/Sub entre contenedores):
+pip install httpx websockets
 python scripts/verify_stack.py
 ```
 
